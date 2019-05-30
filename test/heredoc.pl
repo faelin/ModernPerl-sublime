@@ -1,22 +1,30 @@
+#no warnings;
+
 <<;
-no HEREDOC, "deprecated";
+everything is unquoted
+even across multiple lines
+due to deprecated blank-heredoc;
+no
 
 <<"";
-lines and lines
-<<
-everything is ignored
-and more lines
+looking for blank line
 
 no
 
 <<'';
-lines and lines
+also looking for blank line
+
+<<'this';
+everything is ignored
+even escapes don't work \' \- \d \2
+and more lines
+this
+no
+
 <<'no'
 everything is ignored
 even escapes don't work \' \- \d \2
 and more lines
-
-no
 
 <<EOT;
 lines and lines

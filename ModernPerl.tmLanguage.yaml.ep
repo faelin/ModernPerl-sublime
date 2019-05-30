@@ -1,78 +1,85 @@
-%#
-%# This is Extended Perl (EP) but you should view it with a YAML syntax highlighter
-%# EP is a template language that lets us use Perl to preprocess text (in this case YAML)
-%# For a guide to EP, see http://mojolicio.us/perldoc/Mojolicious/Guides/Rendering#Embedded_Perl
-%#
+#!perl|yaml
+
+###################################################################################################
+#                                                                                                 #
+#  This is Extended Perl (EP) but you should view it with a YAML syntax highlighter               #
+#  EP is a template language that lets us use Perl to preprocess text (in this case YAML)         #
+#  For a guide to EP, see http://mojolicio.us/perldoc/Mojolicious/Guides/Rendering#Embedded_Perl  #
+#                                                                                                 #
+###################################################################################################
+
 ---
 name: ModernPerl
 scopeName: source.perl
 comment: Blaise Roth <blaizer@cpan.org>
 uuid: 2c338cc8-a464-4ee4-a56c-d524947fa6f9
 fileTypes:
-- pl
-- PL
-- pm
-- pod
-- t
+    - pl
+    - PL
+    - pm
+    - pod
+    - t
 firstLineMatch: |-
     ^#!.*\bperl\b
 patterns:
-<% {
-    package ModernPerl::Scopes; # different package so that Carp works
-    use Carp;
-    use YAML::Any qw(LoadFile);
+<%
+    {
+        package ModernPerl::Scopes; # different package so that Carp works
+        use Carp;
+        use YAML::Any qw(LoadFile);
 
-    # I've separated the scopes from the language definition. The language below uses only the
-    # scopes defined here (well.. except for meta.whatever). I've broken it up enough and the list
-    # below is functionally flexible enough that you should be able to style everything to your
-    # needs without having to touch any real code.
+        # I've separated the scopes from the language definition. The language below uses only the
+        # scopes defined here (well.. except for meta.whatever). I've broken it up enough and the list
+        # below is functionally flexible enough that you should be able to style everything to your
+        # needs without having to touch any real code.
 
-    our %scopes = (
-        map {
-            my $file = "ModernPerl-scopes-$_.yaml.ep";
-            my @documents;
-            @documents = LoadFile($file) if -f $file;
-            @documents > 1 and warn "Ignoring documents after first document in $file";
-            my $doc = $documents[0] // {};
-            ref $doc eq "HASH" or die "Top-level structure must be a dict in $file";
-            % $doc;
-        } qw/default user/
-    );
+        our %scopes = (
+            map {
+                my $file = "ModernPerl-scopes-$_.yaml.ep";
+                my @documents;
+                @documents = LoadFile($file) if -f $file;
+                @documents > 1 and warn "Ignoring documents after first document in $file";
+                my $doc = $documents[0] // {};
+                ref $doc eq "HASH" or die "Top-level structure must be a dict in $file";
+                % $doc;
+            } qw/default user/
+        );
 
-    sub decode_scopes {
-        return '' if !defined $_[0];
+        sub decode_scopes {
+            return '' if !defined $_[0];
 
-        our @stack;
-        $_[0] =~ s{\$(\w+)}{
-            exists $scopes{$1} or die "Reference to non-existant '\$$1' while decoding scopes";
+            our @stack;
+            $_[0] =~ s{\$(\w+)}{
+                exists $scopes{$1} or die "Reference to non-existant '\$$1' while decoding scopes";
 
-            grep $_ eq $1, @stack and die "Infinite recursion on '$_[0]' while decoding scopes";
-            {
-                push local(@stack), $1;
-                decode_scopes($scopes{$1});
-            }
-        }eg;
+                grep $_ eq $1, @stack and die "Infinite recursion on '$_[0]' while decoding scopes";
+                {
+                    push local(@stack), $1;
+                    decode_scopes($scopes{$1});
+                }
+            }eg;
 
-        return $_[0];
+            return $_[0];
+        }
+        decode_scopes($_) for values %scopes;
+
+        sub scope {
+            my $name = shift;
+            my $scope = join " ", map {
+                s/(^\w+)(.*)/$1/s;
+                exists $scopes{$_} or Carp::croak "Scope '$_' doesn't exist";
+                defined $scopes{$_} and length $scopes{$_} ? map("$_$2.perl", split /\s+/, $scopes{$_}) : "''";
+            } map $_, @_;
+            return "$name$scope";
+        }
     }
-    decode_scopes($_) for values %scopes;
-
-    sub scope {
-        my $name = shift;
-        my $scope = join " ", map {
-            s/(^\w+)(.*)/$1/s;
-            exists $scopes{$_} or Carp::croak "Scope '$_' doesn't exist";
-            defined $scopes{$_} and length $scopes{$_} ? map("$_$2.perl", split /\s+/, $scopes{$_}) : "''";
-        } map $_, @_;
-        return "$name$scope";
-    }
-}
 
     # using goto so that Carp blames the calling code
     sub scope {
         unshift @_, "";
         goto &ModernPerl::Scopes::scope;
     }
+
     # using a variable because $_M doesn't work otherwise
     our $scope = sub {
         # Needed to use rindex because I don't know of a fast regex solution to this...
@@ -86,9 +93,11 @@ patterns:
     our ($open, $close, $bopen, $bclose);
     our $i = 0;
     sub quote_characters;
-=%>
+%>
+
 - include: '#line_comment'
 - include: '#pod'
+
 -
     match: |-
         (?x) [&%*][!\-~=] | && | \*\* | //
@@ -158,13 +167,8 @@ patterns:
         making it almost impossible to have a literal > at position 0 of a q==!
         There is a way, though! CORE::q=>=. There's always a way!
 <%
-for (
-    [ 'qw?', "(')", 'meta.string.q.perl',  'string_single',   'single' ],
-    [ 'qq',  '(")', 'meta.string.qq.perl', 'string_double',   'double' ],
-    [ 'qx',  '(`)', 'meta.string.qx.perl', 'string_backtick', 'double',        'single' ],
-    [ 'qr',  undef, 'meta.regexp.qr.perl', 'string_regexp',   'double_regexp', 'single',   'adilmnopsux' ],
-    [ 'm',   <<'#', 'meta.regexp.m.perl',  'string_regexp',   'double_regexp', 'single', 'acdgilmnopsux' ],
-# Guessing whether a / is a division or the start of a regex is pretty tricky!
+    my $m_short = <<~'EO_M_SHORT';
+        ## Guessing whether a / is a division or the start of a regex is pretty tricky!
         (?=\s*/) # optimisation to fail faster
         (?:
             # punctuation to expect before a /regex/
@@ -217,28 +221,34 @@ for (
             )
             \/
         )
-#
-) {
-    my ($keyword, $quote, $meta, $scope_key, $include, $single, $modifiers) = @$_;
+    EO_M_SHORT
 
-    my $q = defined $quote ? '\8' : '';
-    if ($keyword =~ /m/) {
-        $q .= '\9';
+    for (
+            [ 'qw?',     "(')",  'meta.string.q.perl' ,  'string_single'  ,  'single'                                   ],
+            [  'qq',     '(")',  'meta.string.qq.perl',  'string_double'  ,  'double'                                   ],
+            [  'qx',     '(`)',  'meta.string.qx.perl',  'string_backtick',  'double',  'single'                        ],
+            [  'qr',     undef,  'meta.regexp.qr.perl',  'string_regexp'  ,  'double_regexp', 'single',   'adilmnopsux' ],
+            [   'm',  $m_short,  'meta.regexp.m.perl' ,  'string_regexp'  ,  'double_regexp', 'single', 'acdgilmnopsux' ],
+        ) {
+                my ($keyword, $quote, $meta, $scope_key, $include, $single, $modifiers) = @$_;
 
-        # gonna replace %%2%, %%3%, etc., in the m $quote above with some lookbehinds
-        sub regexp_m_lb {
-            my ($n) = @_;
-            my $core = sprintf '(?<=CORE::.{%d})', $n;
-            my $format = '(?<![\w\'@$&*%%].{%d}|::.{%1$d}|->.{%1$d})';
-            my $core_lb = sprintf $format, $n + length "CORE::";
-            my $lb = sprintf $format, $n;
-            return qq{
-                    (?: $core $core_lb | $lb )};
-        }
-        chomp $quote;
-        $quote =~ s{\s*%%(\d+)%\s*$}{regexp_m_lb $1}gme;
-    }
-%>\
+                my $q = defined $quote ? '\8' : '';
+                if ($keyword =~ /m/) {
+                    $q .= '\9';
+
+                    # gonna replace %%2%, %%3%, etc., in the m $quote above with some lookbehinds
+                    sub regexp_m_lb {
+                        my ($n) = @_;
+                        my $core = sprintf '(?<=CORE::.{%d})', $n;
+                        my $format = '(?<![\w\'@$&*%%].{%d}|::.{%1$d}|->.{%1$d})';
+                        my $core_lb = sprintf $format, $n + length "CORE::";
+                        my $lb = sprintf $format, $n;
+                        return qq{(?: $core $core_lb | $lb )};
+                }
+                chomp $quote;
+                $quote =~ s{\s*%%(\d+)%\s*$}{regexp_m_lb $1}gme;
+          }
+%>
 -
     begin: |
         (?x)
