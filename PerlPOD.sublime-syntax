@@ -6,64 +6,107 @@ file_extensions:
   - pod
 scope: text.html.pod
 
+
 variables:
   vertical_space: '\n\v\f\r\x{0085}\x{2028}\x{2029}'
   vert_class: '[{{vertical}}]'
   horz_class: '[\s&&[^{{vertical}}]]'
 
-  block_end: '{{vert_class}}{2,}'
-  over_end: '=back'
-  pod_end: '=cut'
+  block_end: '{{vert_class}}({{horz_class}}*{{vert_class}})+'
 
-  command_keyword: '(pod|cut|head\d+|over|back|item|begin|for|encoding)'
+  command_word: '[A-Za-z0-9]+'
+  command_space: '\s{{horz_class}}*'
+  command_end: '(?:{{block_end}}|{{command_space}}(.*){{block_end}})'
+  command_keyword: '(pod|cut|head\d+|over|back|item|begin|end|for|encoding)'
   blank_command: '(pod|back|over)'
 
   form_char: '[BCEFILSXZ]'
   bad_form_char: '[^BCEFILSXZ]'
   blank_form: '[XZ]'
 
-contexts:
-  block-pop:
-    - match: '{{block_end}}'
-      clear_scopes:
-        - command
-        - block
-        - style
 
+contexts:
   immediately-pop:
     - match: ''
       pop: true
 
+  clear-scopes:
+    - match: ''
+      clear_scopes: true
+      scope: text.html.podf
+
+  prototype:
+    - match: '{{block_end}}'
+      push: clear-scopes
+
+
+
   main:
-    - match: '(?xs)  ^  (=)  (?= [A-Za-z0-9]++\h )'
-      comment: Command Paragraphs
-      captures:
-        1: punctuation.definition.keyword.pod
+    - match: '(?x)  ^  =  (?={{command_word}}\s)'
+      comment: Command Paragraph (no underlines allowed in alpha-numeric command word)
+      scope: punctuation.definition.keyword.pod
       push: command
-    - match: '(?xsm)  ^  ([\t ])  (?= .*? ({{block_end}}) )'
+    - match: '(?x) ^ [\t ] {{horz_class}}* (?= \S )$'
       comment: Verbatim Paragraph
-      captures:
-        1: punctuation.section.block.begin.pod
-        2: punctuation.section.block.end.pod
       push: verbatim
-    - match: '(?xs)  (?= ([A-Z]) < [^>]*? (>) )'
+    - match: '(?x) (?= [A-Z]<)'
       comment: Ordinary Paragraph - punctuation codes [BCEFILSXZ]
+      scope: markup.style.pod
       push: style
 
+
   command:
-    - match: '(?x)  (?= ({{command_keyword}}) \h .* )'
-      comment: valid command keyword
+    - meta_scope: meta.function
+    - match: '(?x)  (pod)  {{command_end}}'
+      comment: pod command
+      scope:
+        - meta.block.begin
+        - comment.line.pod
       captures:
-        1: keyword.other
-      push:
-        - match: '(?x)  (head\d+)  \h  (.*)'
-          comment: header command
-          captures:
-            1: markup.heading
-          push:
+        1: punctuation.section.block.begin.pod keyword.control.block.begin.pod
+      pop: true
+    - match: '(?x)  (cut) {{command_end}}'
+      comment: cut command
+      meta_scope: meta.block.end
+      captures:
+        1: punctuation.section.block.end.pod keyword.control.block.end.pod
+        2: comment.line.pod
+      push: clear_scopes
+    - match: '(?x)  (head) (?= \d+ {{command_end}})'
+      comment: header command
+      scope: markup.heading.pod
+      push: header
+    - match: '(?x)  (over) (?= {{command_space}} \d+ {{command_end}})'
+      comment: over command
+      scope: keyword.control.indent.pod
+      push: indent
+    - match: '(?x)  (begin) (?={{command_end}})'
+      comment: begin formatting block command
+      scope: markup.heading.pod
+      push: format
+    - match: '(?x)  (for) (?={{command_end}})'
+      comment: inline formatting command
+      scope: markup.heading.pod
+      push: format
+    - match: '(?x)  (encoding) (?={{command_end}})'
+      comment: encoding declaration command
+      scope: markup.heading.pod
+      push: encoding
+    - match: '(?x)  (back) {{command_end}}'
+      comment: back command outside of indent
+      scope: invalid.illegal
+    - match: '(?x)  (item) {{command_end}}'
+      comment: indent item outside of indent
+      scope: invalid.illegal
+    - match: '(?x)  (end) {{command_end}}'
+      comment: end formatting block command outside of formatting block
+      scope: invalid.illegal
+    - match: '.*$'
+      comment: unrecognized command
+      scope: invalid.illegal
 
   verbatim:
-    - meta_scope: meta.paragraph.pod
+    - meta_scope: meta.paragraph.pod markup.raw.block.pod
     - match: '.*? (?= {{block_end}})'
       scope: markup.raw.block.pod
       pop: true
