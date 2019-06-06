@@ -15,8 +15,8 @@ variables:
   block_end: '{{vert_class}}({{horz_class}}*{{vert_class}})+'
 
   command_word: '[A-Za-z0-9]+'
-  command_space: '\s{{horz_class}}*'
-  command_end: '(?:{{block_end}}|{{command_space}}(.*){{block_end}})'
+  com_spc: '\s{{horz_class}}*'
+  com_end: '(?:{{block_end}}|{{com_spc}}(.*){{block_end}})'
   command_keyword: '(pod|cut|head\d+|over|back|item|begin|end|for|encoding)'
   blank_command: '(pod|back|over)'
 
@@ -42,7 +42,7 @@ contexts:
 
 
   main:
-    - match: '(?x)  ^  =  (?={{command_word}}\s)'
+    - match: '(?x)  ^(?=={{command_word}}\s)'
       comment: Command Paragraph (no underlines allowed in alpha-numeric command word)
       scope: punctuation.definition.keyword.pod
       push: command
@@ -57,7 +57,28 @@ contexts:
 
   command:
     - meta_scope: meta.function
-    - match: '(?x)  (pod)  {{command_end}}'
+      push: clear_scopes
+    - match: '(head)(?=\d+{{com_end}})'
+      comment: header command
+      scope: markup.heading.pod
+      push: header
+    - match: '(over)(?={{com_spc}}\d+{{com_end}})'
+      comment: over command
+      scope: keyword.control.indent.pod
+      push: indent
+    - match: '(begin)(?={{com_end}})'
+      comment: begin formatting block command
+      scope: markup.heading.pod
+      push: format
+    - match: '(for)(?={{com_end}})'
+      comment: inline formatting command
+      scope: markup.heading.pod
+      push: format
+    - match: '(encoding)(?={{com_end}})'
+      comment: encoding declaration command
+      scope: markup.heading.pod
+      push: encoding
+    - match: '(pod)(?={{com_end}})'
       comment: pod command
       scope:
         - meta.block.begin
@@ -65,40 +86,19 @@ contexts:
       captures:
         1: punctuation.section.block.begin.pod keyword.control.block.begin.pod
       pop: true
-    - match: '(?x)  (cut) {{command_end}}'
+    - match: '(cut)(?={{com_end}})'
       comment: cut command
       meta_scope: meta.block.end
       captures:
         1: punctuation.section.block.end.pod keyword.control.block.end.pod
         2: comment.line.pod
-      push: clear_scopes
-    - match: '(?x)  (head) (?= \d+ {{command_end}})'
-      comment: header command
-      scope: markup.heading.pod
-      push: header
-    - match: '(?x)  (over) (?= {{command_space}} \d+ {{command_end}})'
-      comment: over command
-      scope: keyword.control.indent.pod
-      push: indent
-    - match: '(?x)  (begin) (?={{command_end}})'
-      comment: begin formatting block command
-      scope: markup.heading.pod
-      push: format
-    - match: '(?x)  (for) (?={{command_end}})'
-      comment: inline formatting command
-      scope: markup.heading.pod
-      push: format
-    - match: '(?x)  (encoding) (?={{command_end}})'
-      comment: encoding declaration command
-      scope: markup.heading.pod
-      push: encoding
-    - match: '(?x)  (back) {{command_end}}'
+    - match: '(back)(?={{com_end}})'
       comment: back command outside of indent
       scope: invalid.illegal
-    - match: '(?x)  (item) {{command_end}}'
+    - match: '(item)(?={{com_end}})'
       comment: indent item outside of indent
       scope: invalid.illegal
-    - match: '(?x)  (end) {{command_end}}'
+    - match: '(end)(?={{com_end}})'
       comment: end formatting block command outside of formatting block
       scope: invalid.illegal
     - match: '.*$'
