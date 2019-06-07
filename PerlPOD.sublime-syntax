@@ -14,11 +14,11 @@ variables:
 
   block_end: '{{vert_class}}({{horz_class}}*{{vert_class}})+'
 
-  command_word: '[A-Za-z0-9]+'
   com_spc: '\s{{horz_class}}*'
   com_end: '(?:{{block_end}}|{{com_spc}}(.*){{block_end}})'
-  command_keyword: '(pod|cut|head\d+|over|back|item|begin|end|for|encoding)'
-  blank_command: '(pod|back|over)'
+  com_word: '[A-Za-z0-9]+'
+  com_words: '(pod|cut|head\d+|over|back|item|begin|end|for|encoding)'
+  com_silent: '(pod|back|over)'
 
   form_char: '[BCEFILSXZ]'
   bad_form_char: '[^BCEFILSXZ]'
@@ -40,70 +40,87 @@ contexts:
       push: clear-scopes
 
 
-
   main:
-    - match: '(?x)  ^(?=={{command_word}}\s)'
+    - match: '^=(?={{com_word}}\s)'
       comment: Command Paragraph (no underlines allowed in alpha-numeric command word)
       scope: punctuation.definition.keyword.pod
       push: command
-    - match: '(?x) ^ [\t ] {{horz_class}}* (?= \S )$'
+    - match: '^(?=[\t ]{{horz_class}}*\S)'
       comment: Verbatim Paragraph
       push: verbatim
-    - match: '(?x) (?= [A-Z]<)'
+    - match: '(?=[A-Z]<)'
       comment: Ordinary Paragraph - punctuation codes [BCEFILSXZ]
       scope: markup.style.pod
       push: style
 
 
   command:
-    - meta_scope: meta.function
-      push: clear_scopes
-    - match: '(head)(?=\d+{{com_end}})'
+    - match: '(=)(head)(?=\d+{{com_end}})'
       comment: header command
-      scope: markup.heading.pod
-      push: header
-    - match: '(over)(?={{com_spc}}\d+{{com_end}})'
-      comment: over command
-      scope: keyword.control.indent.pod
-      push: indent
-    - match: '(begin)(?={{com_end}})'
-      comment: begin formatting block command
-      scope: markup.heading.pod
-      push: format
-    - match: '(for)(?={{com_end}})'
-      comment: inline formatting command
-      scope: markup.heading.pod
-      push: format
-    - match: '(encoding)(?={{com_end}})'
-      comment: encoding declaration command
-      scope: markup.heading.pod
-      push: encoding
-    - match: '(pod)(?={{com_end}})'
-      comment: pod command
-      scope:
-        - meta.block.begin
-        - comment.line.pod
       captures:
-        1: punctuation.section.block.begin.pod keyword.control.block.begin.pod
+        1: punctuation.definition.keyword.pod
+        2: markup.heading.pod
+      push: header
+    - match: '(=)(over)(?={{com_spc}}\d+{{com_end}})'
+      comment: over command
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: keyword.control.indent.pod
+      push: indent
+    - match: '(=)(begin)(?={{com_end}})'
+      comment: begin formatting block command
+      scope: meta.function
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: markup.heading.pod
+      push: format
+    - match: '(=)(for)(?={{com_end}})'
+      comment: inline formatting command
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: markup.heading.pod
+      push: format
+    - match: '(=)(encoding)(?={{com_end}})'
+      comment: encoding declaration command
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: markup.heading.pod
+      push: encoding
+    - match: '(=)(pod)({{com_end}})'
+      comment: pod command
+      scope: meta.function
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: meta.block.begin keyword.control.block.begin.pod
+        3: comment.line.pod
       pop: true
-    - match: '(cut)(?={{com_end}})'
+    - match: '(=)(cut)(?={{com_end}})'
       comment: cut command
       meta_scope: meta.block.end
       captures:
-        1: punctuation.section.block.end.pod keyword.control.block.end.pod
-        2: comment.line.pod
-    - match: '(back)(?={{com_end}})'
+        1: punctuation.definition.keyword.pod
+        2: meta.block.begin keyword.control.block.begin.pod
+        3: comment.line.pod
+    - match: '(=)(back)(?={{com_end}})'
       comment: back command outside of indent
-      scope: invalid.illegal
-    - match: '(item)(?={{com_end}})'
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: invalid.illegal
+    - match: '(=)(item)(?={{com_end}})'
       comment: indent item outside of indent
-      scope: invalid.illegal
-    - match: '(end)(?={{com_end}})'
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: invalid.illegal
+    - match: '(=)(end)(?={{com_end}})'
       comment: end formatting block command outside of formatting block
-      scope: invalid.illegal
-    - match: '.*$'
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: invalid.illegal
+    - match: '(=)({{com_word}})(?={{com_end}})'
       comment: unrecognized command
-      scope: invalid.illegal
+      captures:
+        1: punctuation.definition.keyword.pod
+        2: invalid.illegal
 
   verbatim:
     - meta_scope: meta.paragraph.pod markup.raw.block.pod
