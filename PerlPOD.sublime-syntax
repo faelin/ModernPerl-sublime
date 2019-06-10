@@ -94,33 +94,37 @@ contexts:
         2: meta.block.begin keyword.control.block.begin.pod
         3: comment.line.pod
       pop: true
-    - match: '(=)(cut)(?={{com_end}})'
+    - match: '(=)(cut)({{com_end}})'
       comment: cut command
       meta_scope: meta.block.end
       captures:
         1: punctuation.definition.keyword.pod
         2: meta.block.begin keyword.control.block.begin.pod
         3: comment.line.pod
-    - match: '(=)(back)(?={{com_end}})'
+    - match: '(=)(back)({{com_end}})'
       comment: back command outside of indent
       captures:
         1: punctuation.definition.keyword.pod
         2: invalid.illegal
-    - match: '(=)(item)(?={{com_end}})'
+        3: comment.line.pod
+    - match: '(=)(item)({{com_end}})'
       comment: indent item outside of indent
       captures:
         1: punctuation.definition.keyword.pod
         2: invalid.illegal
-    - match: '(=)(end)(?={{com_end}})'
+        3: comment.line.pod
+    - match: '(=)(end)({{com_end}})'
       comment: end formatting block command outside of formatting block
       captures:
         1: punctuation.definition.keyword.pod
         2: invalid.illegal
-    - match: '(=)({{com_word}})(?={{com_end}})'
+        3: comment.line.pod
+    - match: '(=)({{com_word}})({{com_end}})'
       comment: unrecognized command
       captures:
         1: punctuation.definition.keyword.pod
         2: invalid.illegal
+        3: comment.line.pod
 
   verbatim:
     - meta_scope: meta.paragraph.pod markup.raw.block.pod
