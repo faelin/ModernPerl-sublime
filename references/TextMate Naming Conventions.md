@@ -85,3 +85,6 @@ SCOPE NAMES
     * `parameter` — when the variable is declared as the parameter.
     * `language` — reserved language variables like `this`, `super`, `self`, etc.
     * `other` — other variables, like `$some_variables`.
+
+
+
