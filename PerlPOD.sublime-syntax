@@ -7,6 +7,7 @@ file_extensions:
 scope: text.html.pod
 
 
+
 variables:
   vertical_space: '\n\v\f\r\x{0085}\x{2028}\x{2029}'
   vert_class: '[{{vertical}}]'
@@ -21,7 +22,7 @@ variables:
   com_silent: '(pod|back|over)'
 
   form_char: '[BCEFILSXZ]'
-  bad_form_char: '[^BCEFILSXZ]'
+  bad_form_chgerear: '[^BCEFILSXZ]'
   blank_form: '[XZ]'
 
 
@@ -33,7 +34,7 @@ contexts:
   clear-scopes:
     - match: ''
       clear_scopes: true
-      scope: text.html.podf
+      scope: text.html.pod
 
   prototype:
     - match: '{{block_end}}'
@@ -48,7 +49,11 @@ contexts:
     - match: '^(?=[\t ]{{horz_class}}*\S)'
       comment: Verbatim Paragraph
       scope: markup.raw.pod
-      push: verbatim
+      push:
+        - meta_scope: meta.paragraph.pod markup.raw.block.pod
+        - match: '.*? (?= {{block_end}})'
+          scope: markup.raw.block.pod
+          pop: true
     - match: '(?=[A-Z]<)'
       comment: Ordinary Paragraph - punctuation codes [BCEFILSXZ]
       scope: markup.style.pod
@@ -110,10 +115,6 @@ contexts:
         2: comment.line.pod
 
   verbatim:
-    - meta_scope: meta.paragraph.pod markup.raw.block.pod
-    - match: '.*? (?= {{block_end}})'
-      scope: markup.raw.block.pod
-      pop: true
 
   style:
     - match: ''
